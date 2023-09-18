@@ -1,35 +1,44 @@
 const path = require('path')
 const webpack = require('webpack')
 
-const { CleanWebpackPlugin } = require('clean-webpack-plugin')
+// Copies details between configs
 const CopyWebpackPlugin = require('copy-webpack-plugin')
-const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+
+const { CleanWebpackPlugin } = require('clean-webpack-plugin')
 const ImageMinimizerPlugin = require('image-minimizer-webpack-plugin')
+
+// Fetch CSS files from JS and outputs CSS to you
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
+
+// Tip: don't get lost in the details of packages
+// - when you really need one, you'll know
+// - do it all by use case!
 
 const IS_DEVELOPMENT = process.env.NODE_ENV === 'dev'
 
 const dirApp = path.join(__dirname, 'app')
-const dirShared = path.join(__dirname, 'shared')
+const dirShared = path.join(__dirname, 'shared') // favicons and stuff
 const dirStyles = path.join(__dirname, 'styles')
 const dirNode = 'node_modules'
 
 module.exports = {
-  entry: [
-    path.join(dirApp, 'index.js'),
-    path.join(dirStyles, 'index.scss')
-  ],
-
-  resolve: {
-    modules: [
-      dirApp,
-      dirShared,
-      dirStyles,
-      dirNode
-    ]
+  devServer: {
+    devMiddleware: {
+      writeToDisk: true,
+    },
   },
+  entry: [path.join(dirApp, 'index.js'), path.join(dirStyles, 'index.scss')],
+
+  // Makes import/export clean
+  resolve: {
+    modules: [dirApp, dirShared, dirStyles, dirNode],
+    extensions: ['.ts', '.js', '.glsl']
+  },
+  
 
   plugins: [
+    // webpack builtin
     new webpack.DefinePlugin({
       IS_DEVELOPMENT
     }),
@@ -48,28 +57,38 @@ module.exports = {
       chunkFilename: '[id].css'
     }),
 
-    new ImageMinimizerPlugin({
-      minimizerOptions: {
-        plugins: [
-          ['gifsicle', { interlaced: true }],
-          ['jpegtran', { progressive: true }],
-          ['optipng', { optimizationLevel: 8 }]
-        ]
-      }
-    }),
-
     new CleanWebpackPlugin()
   ],
+
+  optimization: {
+    minimize: true,
+    minimizer: [
+      new ImageMinimizerPlugin({
+        minimizer: {
+          implementation: ImageMinimizerPlugin.imageminMinify,
+          options: {
+            plugins: [
+              ['gifsicle', { interlaced: true }],
+              ['jpegtran', { progressive: true }],
+              ['optipng', { optimizationLevel: 5 }]
+            ]
+          }
+        }
+      }),
+      new TerserPlugin()
+    ]
+  },
 
   module: {
     rules: [
       {
         test: /\.js$/,
-        use: {
-          loader: 'babel-loader'
-        }
+        loader: 'babel-loader'
       },
-
+      {
+        test: /\.ts$/,
+        loader: 'ts-loader'
+      },
       {
         test: /\.scss$/,
         use: [
@@ -83,6 +102,7 @@ module.exports = {
             loader: 'css-loader'
           },
           {
+            // prefixes css for browser compatibility
             loader: 'postcss-loader'
           },
           {
@@ -92,40 +112,28 @@ module.exports = {
       },
 
       {
-        test: /\.(jpe?g|png|gif|svg|woff2?|fnt|webp)$/,
-        loader: 'file-loader',
-        options: {
-          name (file) {
-            return '[hash].[ext]'
-          }
+        test: /\.(png|jpg|gif|jpe?g|svg|woff2?|fnt|webp|mp4)$/,
+        type: 'asset/resource',
+        generator: {
+          filename: '[name].[hash].[ext]'
         }
       },
 
       {
-        test: /\.(jpe?g|png|gif|svg|webp)$/i,
-        use: [
-          {
-            loader: ImageMinimizerPlugin.loader
-          }
-        ]
-      },
-
-      {
         test: /\.(glsl|frag|vert)$/,
-        loader: 'raw-loader',
-        exclude: /node_modules/
-      },
-
-      {
-        test: /\.(glsl|frag|vert)$/,
-        loader: 'glslify-loader',
+        use: ['raw-loader', 'glslify-loader'],
         exclude: /node_modules/
       }
-    ]
-  },
 
-  optimization: {
-    minimize: true,
-    minimizer: [new TerserPlugin()]
+      // {
+      //   test: /\.(glsl|frag|vert)$/,
+      //   loader: 'glslify-loader',
+      //   exclude: /node_modules/
+      // }
+      // {
+      //   test: /\.(glsl|vs|fs)$/,
+      //   loader: 'ts-shader-loader'
+      // }
+    ]
   }
 }
