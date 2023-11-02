@@ -1,1 +1,0 @@
-self.webpackHotUpdatevisitrw(179,{239:()=>{console.log("Hello from Webpacker")},301:(e,o,a)=>{"use strict";var c=a(568)(e.id,{publicPath:"",locals:!1});e.hot.dispose(c),e.hot.accept(void 0,c)}},(function(e){e.h=()=>"89ea3cae3836209e82a3"}));
